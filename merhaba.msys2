@@ -1,0 +1,93 @@
+cat > ~/bin/guz_yapraklari.py << 'EOF'
+import tkinter as tk
+import random, math, time
+
+root = tk.Tk()
+root.overrideredirect(True)
+root.attributes("-topmost", True)
+root.attributes("-transparentcolor", "black")
+w, h = root.winfo_screenwidth(), root.winfo_screenheight()
+root.geometry(f"{w}x{h}+0+0")
+
+c = tk.Canvas(root, width=w, height=h, bg="black", highlightthickness=0)
+c.pack()
+
+RENKLER = ["#8B4513", "#A0522D", "#B5651D", "#D2691E", "#DAA520",
+           "#FFD700", "#E8B000", "#B22222", "#CC2200", "#FF4500"]
+
+agaclar = []
+n_agac = 5
+for i in range(n_agac):
+    x = int((i + 0.5) * w / n_agac + random.randint(-60, 60))
+    boy = random.randint(int(h * 0.35), int(h * 0.5))
+    taban = h + 10
+    govde_ust = taban - boy * 0.55
+    c.create_polygon(x - 14, taban, x + 14, taban, x + 8, govde_ust, x - 8, govde_ust,
+                     fill="#5a3a1e", outline="")
+    for yon in (-1, 1):
+        c.create_line(x, govde_ust + 30, x + yon * boy * 0.18, govde_ust - boy * 0.18,
+                      fill="#5a3a1e", width=6)
+    cy = taban - boy * 0.78
+    r = boy * 0.3
+    for _ in range(16):
+        ox = random.randint(int(-r), int(r))
+        oy = random.randint(int(-r * 0.7), int(r * 0.7))
+        rr = random.randint(int(r * 0.35), int(r * 0.6))
+        c.create_oval(x + ox - rr, cy + oy - rr, x + ox + rr, cy + oy + rr,
+                      fill=random.choice(RENKLER), outline="")
+    agaclar.append((x, cy, r))
+
+yapraklar = []
+
+def yaprak_olustur(x, y):
+    return {"x": x, "y": y, "boyut": random.randint(9, 20),
+            "aci": random.uniform(0, 6.28), "donme": random.uniform(-0.15, 0.15),
+            "faz": random.uniform(0, 6.28), "hiz": random.uniform(1.5, 3.5),
+            "renk": random.choice(RENKLER), "id": None}
+
+def sekil(y):
+    s, a = y["boyut"], y["aci"]
+    cevir = abs(math.cos(y["faz"])) * 0.8 + 0.2
+    ham = [(0, -s), (0.5 * s, -0.3 * s), (0.4 * s, 0.4 * s),
+           (0, s), (-0.4 * s, 0.4 * s), (-0.5 * s, -0.3 * s)]
+    pts = []
+    for px, py in ham:
+        px *= cevir
+        rx = px * math.cos(a) - py * math.sin(a)
+        ry = px * math.sin(a) + py * math.cos(a)
+        pts += [y["x"] + rx, y["y"] + ry]
+    return pts
+
+baslangic = time.time()
+
+def kare():
+    t = time.time() - baslangic
+    if t < 8.5:
+        for _ in range(random.randint(1, 3)):
+            ax, ay, ar = random.choice(agaclar)
+            yapraklar.append(yaprak_olustur(ax + random.randint(int(-ar), int(ar)),
+                                            ay + random.randint(int(-ar * 0.5), int(ar * 0.5))))
+        if random.random() < 0.5:
+            yapraklar.append(yaprak_olustur(random.randint(0, w), -20))
+    ruzgar = 2.5 + math.sin(t * 1.3) * 2.0
+    for y in yapraklar[:]:
+        y["y"] += y["hiz"]
+        y["x"] += ruzgar + math.sin(t * 2 + y["faz"]) * 1.5
+        y["aci"] += y["donme"]
+        y["faz"] += 0.12
+        pts = sekil(y)
+        if y["id"] is None:
+            y["id"] = c.create_polygon(*pts, fill=y["renk"], outline="")
+        else:
+            c.coords(y["id"], *pts)
+        if y["y"] > h + 30 or y["x"] > w + 50:
+            c.delete(y["id"])
+            yapraklar.remove(y)
+    root.after(33, kare)
+
+root.bind("<Escape>", lambda e: root.destroy())
+root.after(10000, root.destroy)
+root.focus_force()
+kare()
+root.mainloop()
+EOF
